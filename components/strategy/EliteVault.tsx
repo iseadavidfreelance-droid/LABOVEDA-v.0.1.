@@ -6,37 +6,37 @@ import RarityBadge from '../ui/RarityBadge';
 import { ChevronUp, ChevronDown, TrendingUp, TrendingDown, Minus, RefreshCcw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMatrix } from '../../context/MatrixContext';
 
 type SortField = keyof ViewEliteAnalytics;
 type SortDirection = 'asc' | 'desc';
 
 const EliteVault: React.FC = () => {
+  const { selectedMatrix } = useMatrix();
   const [data, setData] = useState<ViewEliteAnalytics[]>([]);
   const [alerts, setAlerts] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const MotionTr = motion.tr as any;
   
   // STATE: Controls the Database Query Parameters only.
-  // We do NOT use this state to sort the array in the client.
   const [sortField, setSortField] = useState<SortField>('efficiency_index');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  // EFFECT: Triggers a new network request when sort params change.
-  // This adheres to "Server-Side Sorting".
+  // EFFECT: Triggers a new network request when sort params OR Matrix Context changes.
   useEffect(() => {
     fetchData();
-  }, [sortField, sortDirection]);
+  }, [sortField, sortDirection, selectedMatrix]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // API CALL: Passing sort parameters to the backend (Supabase .order())
-      // The backend returns the data already sorted.
+      // API CALL: Passing sort parameters AND Matrix Filter
       const [analytics, alertData] = await Promise.all([
-        mockService.getEliteAnalytics(sortField, sortDirection === 'asc'),
+        mockService.getEliteAnalytics(sortField, sortDirection === 'asc', selectedMatrix?.id),
         mockService.getConversionAlerts()
       ]);
       
-      // GOLDEN RULE: Raw render. No .sort(), .filter() or .map() logic applied to data structure here.
+      // GOLDEN RULE: Raw render.
       setData(analytics);
       setAlerts(new Set(alertData.map(a => a.sku)));
     } finally {
@@ -66,7 +66,10 @@ const EliteVault: React.FC = () => {
       <div className="flex justify-between items-end border-b border-void-border pb-4">
          <div>
             <h2 className="text-2xl font-bold text-white tracking-widest uppercase">Bóveda Élite</h2>
-            <p className="font-mono text-xs text-gray-500">ANÁLISIS DE RENDIMIENTO DE ALTO NIVEL</p>
+            <div className="flex gap-2 items-center">
+                <p className="font-mono text-xs text-gray-500">ANÁLISIS DE RENDIMIENTO DE ALTO NIVEL</p>
+                {selectedMatrix && <span className="font-mono text-xs text-tech-green">[{selectedMatrix.code}]</span>}
+            </div>
          </div>
          <div className="flex flex-col items-end gap-1">
              <div className="flex items-center gap-2 font-mono text-xs text-gray-600">
@@ -111,7 +114,7 @@ const EliteVault: React.FC = () => {
                {/* Loading Overlay */}
                <AnimatePresence>
                    {loading && (
-                       <motion.tr
+                       <MotionTr
                            initial={{ opacity: 0 }}
                            animate={{ opacity: 1 }}
                            exit={{ opacity: 0 }}
@@ -120,14 +123,14 @@ const EliteVault: React.FC = () => {
                            <td colSpan={7} className="text-center h-full">
                                <div className="w-full h-[1px] bg-tech-green/50 animate-pulse"></div>
                            </td>
-                       </motion.tr>
+                       </MotionTr>
                    )}
                </AnimatePresence>
 
                {data.map((row) => {
                  const isAlert = alerts.has(row.sku);
                  return (
-                    <motion.tr 
+                    <MotionTr 
                         key={row.sku}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -163,7 +166,7 @@ const EliteVault: React.FC = () => {
                        <td className="p-3 text-center">
                           {renderTrend(row.traffic_trend)}
                        </td>
-                    </motion.tr>
+                    </MotionTr>
                  );
                })}
             </tbody>

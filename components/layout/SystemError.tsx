@@ -9,6 +9,8 @@ interface SystemErrorProps {
 }
 
 const SystemError: React.FC<SystemErrorProps> = ({ error, resetErrorBoundary }) => {
+  const MotionDiv = motion.div as any;
+
   return (
     <div className="h-screen w-screen bg-black flex items-center justify-center p-8 font-mono overflow-hidden relative">
       {/* Background Noise / Scanlines */}
@@ -19,7 +21,7 @@ const SystemError: React.FC<SystemErrorProps> = ({ error, resetErrorBoundary }) 
            }}
       />
       
-      <motion.div 
+      <MotionDiv 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="relative z-10 max-w-2xl w-full border-2 border-red-600 bg-black/90 p-8 shadow-[0_0_50px_rgba(220,38,38,0.2)]"
@@ -64,7 +66,7 @@ const SystemError: React.FC<SystemErrorProps> = ({ error, resetErrorBoundary }) 
             0F 2A 4C 99 <br/>
             E1 00 B3 11
         </div>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

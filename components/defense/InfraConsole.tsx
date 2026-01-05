@@ -3,37 +3,42 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarInfrastructureGap } from '../../types/database';
 import { mockService } from '../../lib/supabase';
-import TechButton from '../ui/TechButton';
-import TechInput from '../ui/TechInput';
+import EditableCell from '../ui/EditableCell';
 import GlitchToast from '../ui/GlitchToast';
 import { Database, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useMatrix } from '../../context/MatrixContext';
+import { useTactical } from '../../context/TacticalContext';
+import { useLog } from '../../context/LogContext';
 
 const InfraConsole: React.FC = () => {
+  const { selectedMatrix } = useMatrix();
+  const { openTacticalSheet } = useTactical();
+  const { addLog } = useLog();
   const [items, setItems] = useState<RadarInfrastructureGap[]>([]);
-  const [inputs, setInputs] = useState<Record<string, string>>({}); // Keyed by SKU
   const [error, setError] = useState<string | null>(null);
+  const MotionDiv = motion.div as any;
 
   useEffect(() => {
-    mockService.getInfrastructureGaps().then(setItems);
-  }, []);
+    mockService.getInfrastructureGaps(selectedMatrix?.id).then(setItems);
+  }, [selectedMatrix]);
 
-  const handleFix = async (item: RadarInfrastructureGap) => {
-    const link = inputs[item.sku];
-    
+  const handleFix = async (sku: string, value: string) => {
     // Validation: Google Drive or Docs
-    if (!link || !/google\.com/.test(link)) {
+    if (!value || !/google\.com/.test(value)) {
       setError("ERROR DE SINTAXIS: URL DE GOOGLE INVÁLIDA");
-      return;
+      addLog("VALIDATION FAILURE: INVALID GOOGLE DOMAIN", 'error');
+      throw new Error("Invalid URL");
     }
 
-    const originalItems = [...items];
-    setItems(prev => prev.filter(i => i.sku !== item.sku));
-
     try {
-      await mockService.patchAsset(item.sku, 'drive', link);
+      await mockService.patchAsset(sku, 'drive', value);
+      // Remove from list on success
+      setItems(prev => prev.filter(i => i.sku !== sku));
+      addLog(`INFRASTRUCTURE GAP REPAIRED FOR ${sku}`, 'success');
     } catch (e) {
-      setItems(originalItems);
       setError("ERROR DE ESCRITURA EN SECTOR DE DISCO.");
+      addLog(`DRIVE WRITE FAILURE FOR ${sku}`, 'error');
+      throw e;
     }
   };
 
@@ -46,7 +51,10 @@ const InfraConsole: React.FC = () => {
              <Database className="w-6 h-6 text-yellow-500" />
              <div>
                 <h2 className="text-2xl font-bold text-white uppercase tracking-widest">Brechas de Infraestructura</h2>
-                <p className="font-mono text-[10px] text-yellow-500/70">MANTENIMIENTO ESTRUCTURAL REQUERIDO</p>
+                <div className="flex gap-2 items-center">
+                    <p className="font-mono text-[10px] text-yellow-500/70">MANTENIMIENTO ESTRUCTURAL REQUERIDO</p>
+                    {selectedMatrix && <span className="text-[10px] font-mono text-tech-green">[{selectedMatrix.code}]</span>}
+                </div>
              </div>
         </div>
         <div className="font-mono text-xs text-gray-500">
@@ -65,7 +73,7 @@ const InfraConsole: React.FC = () => {
         <div className="divide-y divide-void-border">
           <AnimatePresence>
             {items.map((item) => (
-              <motion.div
+              <MotionDiv
                 key={item.sku}
                 layout
                 initial={{ opacity: 0 }}
@@ -73,9 +81,12 @@ const InfraConsole: React.FC = () => {
                 exit={{ opacity: 0, x: -20, height: 0 }}
                 className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-void-gray/20 transition-colors group"
               >
-                <div className="col-span-4">
-                    <div className="font-bold text-sm text-gray-300 group-hover:text-white">{item.asset_name}</div>
-                    <div className="font-mono text-[10px] text-gray-600">{item.sku}</div>
+                <div 
+                    className="col-span-4 cursor-pointer"
+                    onClick={() => openTacticalSheet(item.sku)}
+                >
+                    <div className="font-bold text-sm text-gray-300 group-hover:text-tech-green transition-colors">{item.asset_name}</div>
+                    <div className="font-mono text-[10px] text-gray-600 group-hover:text-gray-400">{item.sku}</div>
                 </div>
                 
                 <div className="col-span-2">
@@ -89,23 +100,15 @@ const InfraConsole: React.FC = () => {
                     {item.days_open} DÍAS
                 </div>
                 
-                <div className="col-span-5 flex gap-2">
-                    <div className="flex-1">
-                        <TechInput 
-                            placeholder=">: INGRESAR LINK DRIVE"
-                            className="h-8 text-[11px]"
-                            value={inputs[item.sku] || ''}
-                            onChange={(e) => setInputs({...inputs, [item.sku]: e.target.value})}
-                        />
-                    </div>
-                    <TechButton 
-                        variant="primary" 
-                        label="REPARAR" 
-                        className="h-8 px-4 text-[10px]"
-                        onClick={() => handleFix(item)}
+                <div className="col-span-5">
+                    <EditableCell 
+                        value="" 
+                        placeholder=">: INGRESAR LINK GOOGLE DRIVE" 
+                        onSave={(val) => handleFix(item.sku, val)}
+                        type="url"
                     />
                 </div>
-              </motion.div>
+              </MotionDiv>
             ))}
           </AnimatePresence>
         </div>

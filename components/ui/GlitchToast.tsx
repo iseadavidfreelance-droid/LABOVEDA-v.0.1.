@@ -9,6 +9,8 @@ interface GlitchToastProps {
 }
 
 const GlitchToast: React.FC<GlitchToastProps> = ({ message, onClose }) => {
+  const MotionDiv = motion.div as any;
+
   useEffect(() => {
     if (message) {
       const timer = setTimeout(onClose, 3000);
@@ -19,7 +21,7 @@ const GlitchToast: React.FC<GlitchToastProps> = ({ message, onClose }) => {
   return (
     <AnimatePresence>
       {message && (
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 50, x: '-50%' }}
           animate={{ opacity: 1, y: 0, x: '-50%' }}
           exit={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
@@ -43,7 +45,7 @@ const GlitchToast: React.FC<GlitchToastProps> = ({ message, onClose }) => {
             <div className="absolute top-0 left-0 w-2 h-2 border-l-2 border-t-2 border-red-500"></div>
             <div className="absolute bottom-0 right-0 w-2 h-2 border-r-2 border-b-2 border-red-500"></div>
           </div>
-        </motion.div>
+        </MotionDiv>
       )}
     </AnimatePresence>
   );

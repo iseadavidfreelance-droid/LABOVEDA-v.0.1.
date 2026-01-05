@@ -8,6 +8,7 @@ interface BootSequenceProps {
 
 const BootSequence: React.FC<BootSequenceProps> = ({ onComplete }) => {
   const [logs, setLogs] = useState<string[]>([]);
+  const MotionDiv = motion.div as any;
 
   const sequence = [
     "INITIALIZING KERNEL...",
@@ -33,7 +34,7 @@ const BootSequence: React.FC<BootSequenceProps> = ({ onComplete }) => {
   }, []);
 
   return (
-    <motion.div 
+    <MotionDiv 
       className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center font-mono text-xs md:text-sm text-tech-green selection:bg-tech-green selection:text-black"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, filter: "blur(10px)" }}
@@ -46,7 +47,7 @@ const BootSequence: React.FC<BootSequenceProps> = ({ onComplete }) => {
         </div>
         <div className="flex flex-col space-y-1 h-48 overflow-hidden justify-end">
           {logs.map((log, i) => (
-            <motion.div 
+            <MotionDiv 
               key={i}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
@@ -54,23 +55,23 @@ const BootSequence: React.FC<BootSequenceProps> = ({ onComplete }) => {
             >
               <span className="text-gray-600">[{new Date().toLocaleTimeString('en-US', { hour12: false })}]</span>
               <span>{log}</span>
-            </motion.div>
+            </MotionDiv>
           ))}
         </div>
-        <motion.div 
+        <MotionDiv 
           className="mt-4 h-1 bg-void-border w-full overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
-          <motion.div 
+          <MotionDiv 
             className="h-full bg-tech-green"
             initial={{ width: "0%" }}
             animate={{ width: "100%" }}
             transition={{ duration: 2.5, ease: "easeInOut" }}
           />
-        </motion.div>
+        </MotionDiv>
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 };
 

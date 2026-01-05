@@ -15,6 +15,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onSelect }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BusinessAsset[]>([]);
   const [loading, setLoading] = useState(false);
+  const MotionDiv = motion.div as any;
   
   // Use SKU as key identifier logic internally if needed, 
   // but we just pass the full object up.
@@ -60,7 +61,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onSelect }) => {
 
       <AnimatePresence>
         {results.length > 0 && (
-          <motion.div 
+          <MotionDiv 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -82,7 +83,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onSelect }) => {
                 </div>
               </button>
             ))}
-          </motion.div>
+          </MotionDiv>
         )}
       </AnimatePresence>
       

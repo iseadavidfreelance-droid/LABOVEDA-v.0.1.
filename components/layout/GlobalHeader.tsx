@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Clock, Activity, Database, Globe } from "lucide-react";
 import StatusIndicator from "../ui/StatusIndicator";
 import { mockService } from "../../lib/supabase";
+import MatrixCommandStrip from "./MatrixCommandStrip";
 
 const GlobalHeader: React.FC = () => {
   const [time, setTime] = useState(new Date());
@@ -35,47 +36,36 @@ const GlobalHeader: React.FC = () => {
   };
 
   return (
-    <header className="h-16 border-b border-void-border bg-black/90 backdrop-blur-sm flex items-center justify-between px-6 z-10">
+    <header className="h-16 border-b border-void-border bg-black/90 backdrop-blur-sm flex items-center justify-between px-0 z-10">
       
-      {/* LEFT: CLOCKS */}
-      <div className="flex items-center gap-6">
-        <div className="flex flex-col">
-          <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">LOCAL SYSTEM</span>
-          <div className="text-lg font-mono text-white leading-none flex items-center gap-2">
-            <Clock className="w-3 h-3 text-gray-600" />
-            {formatTime(time)}
-          </div>
-        </div>
-        <div className="h-8 w-[1px] bg-void-border"></div>
-        <div className="flex flex-col">
-          <span className="text-[10px] text-tech-green font-mono uppercase tracking-wider">UTC NET</span>
-          <div className="text-lg font-mono text-gray-400 leading-none">
-            {formatTime(time, 'UTC')}
-          </div>
-        </div>
+      {/* LEFT: MATRIX COMMAND STRIP */}
+      <div className="h-full">
+         <MatrixCommandStrip />
       </div>
 
-      {/* CENTER: KPIs */}
-      <div className="hidden md:flex items-center gap-8">
-        <div className="flex items-center gap-3">
-            <Database className="w-4 h-4 text-gray-600" />
+      {/* CENTER: Clocks & KPIs */}
+      <div className="flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-6">
             <div className="flex flex-col">
-                <span className="text-[9px] text-gray-500 uppercase">Total Assets</span>
-                <span className="font-mono text-sm text-white font-bold">{kpis.assets.toLocaleString()}</span>
+            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">LOCAL SYSTEM</span>
+            <div className="text-lg font-mono text-white leading-none flex items-center gap-2">
+                <Clock className="w-3 h-3 text-gray-600" />
+                {formatTime(time)}
             </div>
-        </div>
-        <div className="flex items-center gap-3">
-            <Globe className="w-4 h-4 text-gray-600" />
+            </div>
+            <div className="h-8 w-[1px] bg-void-border"></div>
             <div className="flex flex-col">
-                <span className="text-[9px] text-gray-500 uppercase">Active Nodes</span>
-                <span className="font-mono text-sm text-white font-bold">{kpis.nodes.toLocaleString()}</span>
+            <span className="text-[10px] text-tech-green font-mono uppercase tracking-wider">UTC NET</span>
+            <div className="text-lg font-mono text-gray-400 leading-none">
+                {formatTime(time, 'UTC')}
+            </div>
             </div>
         </div>
       </div>
 
       {/* RIGHT: SYSTEM HEARTBEAT */}
-      <div className="flex items-center gap-4">
-        <div className="text-right">
+      <div className="flex items-center gap-4 px-6">
+        <div className="text-right hidden md:block">
             <div className="text-[10px] text-gray-500 uppercase tracking-widest">INGESTION CYCLE</div>
             <div className="font-mono text-xs text-tech-green">
                {heartbeat.processed} RECS PROCESSED

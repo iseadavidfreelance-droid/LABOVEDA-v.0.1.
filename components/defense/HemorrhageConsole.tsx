@@ -4,54 +4,51 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RadarMonetizationReady } from '../../types/database';
 import { mockService } from '../../lib/supabase';
 import TechButton from '../ui/TechButton';
-import TechInput from '../ui/TechInput';
 import RarityBadge from '../ui/RarityBadge';
+import EditableCell from '../ui/EditableCell';
 import GlitchToast from '../ui/GlitchToast';
-import { AlertOctagon, Search, Save, ExternalLink } from 'lucide-react';
+import { AlertOctagon, Search } from 'lucide-react';
+import { useMatrix } from '../../context/MatrixContext';
+import { useTactical } from '../../context/TacticalContext';
+import { useLog } from '../../context/LogContext';
 
 const HemorrhageConsole: React.FC = () => {
+  const { selectedMatrix } = useMatrix();
+  const { openTacticalSheet } = useTactical();
+  const { addLog } = useLog();
   const [items, setItems] = useState<RadarMonetizationReady[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inputs, setInputs] = useState<Record<string, string>>({}); // Keyed by SKU
   const [error, setError] = useState<string | null>(null);
+  const MotionDiv = motion.div as any;
 
   useEffect(() => {
-    mockService.getMonetizationGaps().then(data => {
+    setLoading(true);
+    mockService.getMonetizationGaps(selectedMatrix?.id).then(data => {
       setItems(data);
       setLoading(false);
     });
-  }, []);
-
-  const handleInputChange = (sku: string, value: string) => {
-    setInputs(prev => ({ ...prev, [sku]: value }));
-  };
+  }, [selectedMatrix]);
 
   const handleHunterSearch = (assetName: string) => {
-    // Búsqueda simple en Payhip o Google como fallback "Hunter"
+    addLog(`INITIATING EXTERNAL SEARCH PROTOCOL FOR: ${assetName}`, 'info');
     const query = encodeURIComponent(assetName);
     window.open(`https://payhip.com/dashboard/products?q=${query}`, '_blank');
   };
 
-  const handlePatch = async (item: RadarMonetizationReady) => {
-    const link = inputs[item.sku];
-    if (!link) {
-      setError("ENLACE REQUERIDO PARA PROTOCOLO DE PARCHE");
-      return;
-    }
-
-    // Optimistic Update
-    const originalItems = [...items];
-    setItems(prev => prev.filter(i => i.sku !== item.sku));
-
+  const handlePatch = async (sku: string, value: string) => {
+    if (!value) return;
+    
     try {
-      await mockService.patchAsset(item.sku, 'payhip', link);
+      await mockService.patchAsset(sku, 'payhip', value);
+      setItems(prev => prev.filter(i => i.sku !== sku));
+      addLog(`ASSET ${sku} PATCHED SUCCESSFULLY. REVENUE STREAM SECURED.`, 'success');
     } catch (e) {
-      setItems(originalItems);
-      setError("FALLO EN INYECCIÓN DE CÓDIGO. REINTENTAR.");
+      setError("FALLO EN INYECCIÓN DE CÓDIGO.");
+      addLog(`PATCH FAILED FOR ${sku}`, 'error');
     }
   };
 
-  if (loading) return <div className="p-8 font-mono text-tech-green animate-pulse">ESCANEANDO FUGAS DE CAPITAL...</div>;
+  if (loading) return <div className="p-8 font-mono text-tech-green animate-pulse">ESCANEANDO FUGAS DE CAPITAL [MATRIX: {selectedMatrix?.code || 'ALL'}]...</div>;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -63,14 +60,17 @@ const HemorrhageConsole: React.FC = () => {
         </div>
         <div>
           <h2 className="text-3xl font-bold text-red-500 tracking-widest uppercase">Protocolo Hemorragia</h2>
-          <p className="font-mono text-xs text-red-400/70">DETECTADOS ACTIVOS DE ALTO VALOR SIN MONETIZACIÓN. ACCIÓN INMEDIATA REQUERIDA.</p>
+          <div className="flex gap-2">
+             <span className="font-mono text-xs text-red-400/70">DETECTADOS ACTIVOS DE ALTO VALOR SIN MONETIZACIÓN.</span>
+             {selectedMatrix && <span className="font-mono text-xs text-white bg-red-900/50 px-1">FILTER: {selectedMatrix.code}</span>}
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence>
           {items.map((item) => (
-            <motion.div
+            <MotionDiv
               key={item.sku}
               layout
               initial={{ opacity: 0, scale: 0.9 }}
@@ -78,16 +78,17 @@ const HemorrhageConsole: React.FC = () => {
               exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
               className="relative bg-black border border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.2)] p-6 flex flex-col justify-between group"
             >
-              {/* Flashing Border Effect */}
-              <div className="absolute inset-0 border-2 border-red-600/50 opacity-0 group-hover:opacity-100 group-hover:animate-pulse pointer-events-none transition-opacity"></div>
-
-              <div className="space-y-4 mb-6">
+              {/* Interactive SKU Header */}
+              <div 
+                onClick={() => openTacticalSheet(item.sku)}
+                className="cursor-pointer space-y-4 mb-6 hover:bg-white/5 -m-6 p-6 transition-colors border-b border-transparent hover:border-red-900"
+              >
                 <div className="flex justify-between items-start">
                   <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">{item.matrix_name}</span>
                   <RarityBadge tier={item.tier} />
                 </div>
                 
-                <h3 className="text-xl font-bold text-white font-sans">{item.asset_name}</h3>
+                <h3 className="text-xl font-bold text-white font-sans group-hover:text-tech-green transition-colors">{item.asset_name}</h3>
                 
                 <div className="flex items-center gap-4 font-mono text-xs">
                   <div className="text-red-400">IMPACTO: {item.potential_revenue_impact}</div>
@@ -107,19 +108,15 @@ const HemorrhageConsole: React.FC = () => {
                     />
                  </div>
                  
-                 <div className="flex gap-2">
-                    <div className="flex-1">
-                      <TechInput 
-                        placeholder="PEGAR PAYHIP LINK..." 
-                        value={inputs[item.sku] || ''}
-                        onChange={(e) => handleInputChange(item.sku, e.target.value)}
-                        className="text-xs border-red-900 focus:border-red-500 text-red-100"
-                      />
-                    </div>
-                    <TechButton 
-                      variant="danger"
-                      icon={Save}
-                      onClick={() => handlePatch(item)}
+                 {/* Hot Trigger Editable Cell */}
+                 <div className="bg-void-gray/20 border border-void-border p-2">
+                    <label className="text-[9px] font-mono text-red-500 uppercase block mb-1">INYECCIÓN PAYHIP LINK</label>
+                    <EditableCell 
+                        value="" 
+                        placeholder=">: PEGAR ENLACE AQUÍ" 
+                        onSave={(val) => handlePatch(item.sku, val)}
+                        type="url"
+                        className="text-red-100 border-red-500"
                     />
                  </div>
               </div>
@@ -127,7 +124,7 @@ const HemorrhageConsole: React.FC = () => {
               {/* Decorative Corner */}
               <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-red-500"></div>
               <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-red-500"></div>
-            </motion.div>
+            </MotionDiv>
           ))}
         </AnimatePresence>
       </div>
@@ -135,7 +132,7 @@ const HemorrhageConsole: React.FC = () => {
       {items.length === 0 && (
         <div className="flex flex-col items-center justify-center h-64 border border-dashed border-gray-800 text-gray-600 font-mono">
           <p className="text-xl text-tech-green">SISTEMA ESTABILIZADO</p>
-          <p className="text-sm">NO SE DETECTAN FUGAS DE CAPITAL CRÍTICAS</p>
+          <p className="text-sm">NO SE DETECTAN FUGAS DE CAPITAL CRÍTICAS EN ESTE SECTOR</p>
         </div>
       )}
     </div>

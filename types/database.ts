@@ -95,6 +95,7 @@ export interface IngestionCycle {
  */
 export interface RadarMonetizationReady {
   sku: string; // Changed from asset_id
+  matrix_id: string; // Added for Filtering
   asset_name: string;
   matrix_name: string;
   current_score: number;
@@ -109,6 +110,7 @@ export interface RadarMonetizationReady {
  */
 export interface RadarInfrastructureGap {
   sku: string; // Changed from asset_id
+  matrix_id: string; // Added for Filtering
   asset_name: string;
   issue_type: 'MISSING_SKU' | 'NO_DESCRIPTION' | 'BROKEN_IMAGE';
   detected_at: string;
@@ -121,6 +123,7 @@ export interface RadarInfrastructureGap {
  */
 export interface RadarGhostAssets {
   sku: string; // Changed from asset_id
+  matrix_id: string; // Added for Filtering
   asset_name: string;
   created_at: string;
   days_since_creation: number;
@@ -133,6 +136,7 @@ export interface RadarGhostAssets {
  */
 export interface RadarTheVoid {
   sku: string; // Changed from asset_id
+  matrix_id: string; // Added for Filtering
   asset_name: string;
   node_count: number;
   total_impressions: number;
@@ -146,6 +150,7 @@ export interface RadarTheVoid {
  */
 export interface RadarDustCleaner {
   sku: string; // Changed from asset_id
+  matrix_id: string; // Added for Filtering
   asset_name: string;
   score: number; // < 50
   tier: 'DUST';
@@ -159,6 +164,7 @@ export interface RadarDustCleaner {
  */
 export interface ViewEliteAnalytics {
   sku: string; // Changed from asset_id
+  matrix_id: string; // Added for Filtering
   asset_name: string;
   tier: 'LEGENDARY' | 'RARE';
   traffic_score: number;

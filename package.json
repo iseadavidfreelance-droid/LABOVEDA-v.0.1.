@@ -16,7 +16,8 @@
     "clsx": "2.1.0",
     "tailwind-merge": "2.2.1",
     "@supabase/supabase-js": "2.39.7",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "cmdk": "1.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
