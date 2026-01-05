@@ -2,6 +2,7 @@
 /**
  * LABOVEDA DATABASE TYPES
  * Based on Manifesto Sensory v1.2 & Hierarchy: Matrix -> Asset -> Node
+ * STRICT MODE: SKU IS PRIMARY KEY.
  */
 
 // ------------------------------------------------------------------
@@ -25,7 +26,7 @@ export enum AssetStatus {
  * Matrix (Marca) - The top-level hierarchy entity.
  */
 export interface MatrixRegistry {
-  id: string; // UUID
+  id: string; // UUID (Matrix still uses UUID or Code)
   name: string;
   code: string; // Internal reference code
   description?: string;
@@ -33,17 +34,17 @@ export interface MatrixRegistry {
   created_at: string;
   updated_at: string;
   total_assets_count: number;
-  efficiency_score: number; // Calculated backend side, stored here for cache or derived
+  efficiency_score: number;
 }
 
 /**
  * Business Asset (Producto) - The core unit of value.
+ * PK: SKU (String)
  */
 export interface BusinessAsset {
-  id: string; // UUID
+  sku: string; // PK - STRICT STRING
   matrix_id: string; // FK -> matrix_registry.id
   name: string;
-  sku: string | null;
   description?: string;
   main_image_url?: string;
   tier: RarityTier;
@@ -57,10 +58,11 @@ export interface BusinessAsset {
 
 /**
  * Pinterest Node (Pin) - The tactical endpoint/traffic source.
+ * FK: asset_sku
  */
 export interface PinterestNode {
-  id: string; // UUID
-  asset_id: string; // FK -> business_assets.id
+  id: string; // UUID (Nodes still use UUID internal, or Pin ID)
+  asset_sku: string | null; // FK -> business_assets.sku
   pin_id: string; // External Platform ID
   url: string;
   image_url: string;
@@ -92,7 +94,7 @@ export interface IngestionCycle {
  * Assets ready for monetization but missing links/setup.
  */
 export interface RadarMonetizationReady {
-  asset_id: string;
+  sku: string; // Changed from asset_id
   asset_name: string;
   matrix_name: string;
   current_score: number;
@@ -106,7 +108,7 @@ export interface RadarMonetizationReady {
  * Structural gaps like missing SKUs or broken definitions.
  */
 export interface RadarInfrastructureGap {
-  asset_id: string;
+  sku: string; // Changed from asset_id
   asset_name: string;
   issue_type: 'MISSING_SKU' | 'NO_DESCRIPTION' | 'BROKEN_IMAGE';
   detected_at: string;
@@ -118,7 +120,7 @@ export interface RadarInfrastructureGap {
  * Assets that exist in DB but have no Nodes attached (Orphans).
  */
 export interface RadarGhostAssets {
-  asset_id: string;
+  sku: string; // Changed from asset_id
   asset_name: string;
   created_at: string;
   days_since_creation: number;
@@ -130,11 +132,11 @@ export interface RadarGhostAssets {
  * Assets with Nodes but 0 traffic/metrics (Dead weight).
  */
 export interface RadarTheVoid {
-  asset_id: string;
+  sku: string; // Changed from asset_id
   asset_name: string;
   node_count: number;
-  total_impressions: number; // Likely 0
-  total_clicks: number; // Likely 0
+  total_impressions: number;
+  total_clicks: number;
   dormant_days: number;
 }
 
@@ -143,7 +145,7 @@ export interface RadarTheVoid {
  * Low score assets (Dust) candidates for purging.
  */
 export interface RadarDustCleaner {
-  asset_id: string;
+  sku: string; // Changed from asset_id
   asset_name: string;
   score: number; // < 50
   tier: 'DUST';
@@ -152,27 +154,12 @@ export interface RadarDustCleaner {
 }
 
 /**
- * Vista: Comando (Estrategia) - Leaderboard
- * Performance by Matrix.
- */
-export interface ViewMatrixLeaderboard {
-  matrix_id: string;
-  matrix_name: string;
-  total_assets: number;
-  active_nodes: number;
-  total_traffic: number;
-  avg_asset_score: number;
-  dominance_percentage: number;
-}
-
-/**
  * Vista: Bóveda Élite (Estrategia)
  * High performing assets (Legendary/Rare).
  */
 export interface ViewEliteAnalytics {
-  asset_id: string;
+  sku: string; // Changed from asset_id
   asset_name: string;
-  sku: string;
   tier: 'LEGENDARY' | 'RARE';
   traffic_score: number;
   revenue_score: number;
@@ -185,5 +172,5 @@ export interface ViewEliteAnalytics {
  * High traffic but zero revenue assets.
  */
 export interface RadarConversionAlert {
-    asset_id: string;
+    sku: string; // Changed from asset_id
 }

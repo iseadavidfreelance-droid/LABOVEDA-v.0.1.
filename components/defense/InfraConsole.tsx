@@ -10,7 +10,7 @@ import { Database, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 const InfraConsole: React.FC = () => {
   const [items, setItems] = useState<RadarInfrastructureGap[]>([]);
-  const [inputs, setInputs] = useState<Record<string, string>>({});
+  const [inputs, setInputs] = useState<Record<string, string>>({}); // Keyed by SKU
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,7 +18,7 @@ const InfraConsole: React.FC = () => {
   }, []);
 
   const handleFix = async (item: RadarInfrastructureGap) => {
-    const link = inputs[item.asset_id];
+    const link = inputs[item.sku];
     
     // Validation: Google Drive or Docs
     if (!link || !/google\.com/.test(link)) {
@@ -27,10 +27,10 @@ const InfraConsole: React.FC = () => {
     }
 
     const originalItems = [...items];
-    setItems(prev => prev.filter(i => i.asset_id !== item.asset_id));
+    setItems(prev => prev.filter(i => i.sku !== item.sku));
 
     try {
-      await mockService.patchAsset(item.asset_id, 'drive', link);
+      await mockService.patchAsset(item.sku, 'drive', link);
     } catch (e) {
       setItems(originalItems);
       setError("ERROR DE ESCRITURA EN SECTOR DE DISCO.");
@@ -56,7 +56,7 @@ const InfraConsole: React.FC = () => {
 
       <div className="border border-void-border bg-void-gray/10">
         <div className="grid grid-cols-12 gap-4 p-3 border-b border-void-border text-[10px] font-mono text-gray-500 uppercase tracking-wider bg-black">
-            <div className="col-span-4">Activo / ID</div>
+            <div className="col-span-4">Activo / SKU</div>
             <div className="col-span-2">Tipo de Error</div>
             <div className="col-span-1">Antigüedad</div>
             <div className="col-span-5">Consola de Reparación</div>
@@ -66,7 +66,7 @@ const InfraConsole: React.FC = () => {
           <AnimatePresence>
             {items.map((item) => (
               <motion.div
-                key={item.asset_id}
+                key={item.sku}
                 layout
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -75,7 +75,7 @@ const InfraConsole: React.FC = () => {
               >
                 <div className="col-span-4">
                     <div className="font-bold text-sm text-gray-300 group-hover:text-white">{item.asset_name}</div>
-                    <div className="font-mono text-[10px] text-gray-600">{item.asset_id}</div>
+                    <div className="font-mono text-[10px] text-gray-600">{item.sku}</div>
                 </div>
                 
                 <div className="col-span-2">
@@ -94,8 +94,8 @@ const InfraConsole: React.FC = () => {
                         <TechInput 
                             placeholder=">: INGRESAR LINK DRIVE"
                             className="h-8 text-[11px]"
-                            value={inputs[item.asset_id] || ''}
-                            onChange={(e) => setInputs({...inputs, [item.asset_id]: e.target.value})}
+                            value={inputs[item.sku] || ''}
+                            onChange={(e) => setInputs({...inputs, [item.sku]: e.target.value})}
                         />
                     </div>
                     <TechButton 

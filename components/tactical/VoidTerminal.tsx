@@ -31,7 +31,7 @@ const VoidTerminal: React.FC = () => {
 
     const nodeId = activeNode.id;
     const previousNodes = [...nodes];
-    const assetSku = selectedAsset.sku || 'UNKNOWN';
+    const assetSku = selectedAsset.sku; // Use SKU as Foreign Key
 
     setProcessing(true);
 
@@ -42,7 +42,7 @@ const VoidTerminal: React.FC = () => {
     setSelectedAsset(null); // Reset brain
 
     try {
-      // Simulate backend call
+      // Execute Link with SKU
       await mockService.linkNodeToAsset(nodeId, assetSku);
       setProcessing(false);
     } catch (err) {
@@ -144,7 +144,7 @@ const VoidTerminal: React.FC = () => {
 
             <div className="bg-void-gray/10 p-6 border border-void-border space-y-6">
                 <div className="space-y-2">
-                    <label className="text-[10px] text-tech-green font-bold tracking-widest uppercase">TARGET ASSET</label>
+                    <label className="text-[10px] text-tech-green font-bold tracking-widest uppercase">TARGET ASSET (SKU)</label>
                     <AssetSearch onSelect={setSelectedAsset} />
                 </div>
 

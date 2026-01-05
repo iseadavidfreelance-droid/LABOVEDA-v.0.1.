@@ -3,9 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { ViewEliteAnalytics } from '../../types/database';
 import { mockService } from '../../lib/supabase';
 import RarityBadge from '../ui/RarityBadge';
-import { ChevronUp, ChevronDown, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ChevronUp, ChevronDown, TrendingUp, TrendingDown, Minus, RefreshCcw } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type SortField = keyof ViewEliteAnalytics;
 type SortDirection = 'asc' | 'desc';
@@ -13,20 +13,36 @@ type SortDirection = 'asc' | 'desc';
 const EliteVault: React.FC = () => {
   const [data, setData] = useState<ViewEliteAnalytics[]>([]);
   const [alerts, setAlerts] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+  
+  // STATE: Controls the Database Query Parameters only.
+  // We do NOT use this state to sort the array in the client.
   const [sortField, setSortField] = useState<SortField>('efficiency_index');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
+  // EFFECT: Triggers a new network request when sort params change.
+  // This adheres to "Server-Side Sorting".
   useEffect(() => {
-    const fetchData = async () => {
+    fetchData();
+  }, [sortField, sortDirection]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // API CALL: Passing sort parameters to the backend (Supabase .order())
+      // The backend returns the data already sorted.
       const [analytics, alertData] = await Promise.all([
-        mockService.getEliteAnalytics(),
+        mockService.getEliteAnalytics(sortField, sortDirection === 'asc'),
         mockService.getConversionAlerts()
       ]);
+      
+      // GOLDEN RULE: Raw render. No .sort(), .filter() or .map() logic applied to data structure here.
       setData(analytics);
-      setAlerts(new Set(alertData.map(a => a.asset_id)));
-    };
-    fetchData();
-  }, []);
+      setAlerts(new Set(alertData.map(a => a.sku)));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -36,24 +52,6 @@ const EliteVault: React.FC = () => {
       setSortDirection('desc');
     }
   };
-
-  const sortedData = [...data].sort((a, b) => {
-    const valA = a[sortField];
-    const valB = b[sortField];
-    if (valA === valB) return 0;
-    
-    // String comparison
-    if (typeof valA === 'string' && typeof valB === 'string') {
-        return sortDirection === 'asc' 
-            ? valA.localeCompare(valB) 
-            : valB.localeCompare(valA);
-    }
-    
-    // Numeric comparison
-    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
 
   const renderTrend = (trend: 'UP' | 'DOWN' | 'STABLE') => {
     switch (trend) {
@@ -70,8 +68,14 @@ const EliteVault: React.FC = () => {
             <h2 className="text-2xl font-bold text-white tracking-widest uppercase">Bóveda Élite</h2>
             <p className="font-mono text-xs text-gray-500">ANÁLISIS DE RENDIMIENTO DE ALTO NIVEL</p>
          </div>
-         <div className="font-mono text-xs text-gray-600">
-            {data.length} ASSETS MONITORED
+         <div className="flex flex-col items-end gap-1">
+             <div className="flex items-center gap-2 font-mono text-xs text-gray-600">
+                {loading && <RefreshCcw className="w-3 h-3 animate-spin text-tech-green" />}
+                {loading ? "SYNCING..." : `${data.length} ASSETS CONNECTED`}
+             </div>
+             <div className="text-[9px] text-gray-700 font-mono">
+                 QUERY: ORDER BY {sortField.toUpperCase()} {sortDirection.toUpperCase()}
+             </div>
          </div>
       </div>
 
@@ -91,7 +95,7 @@ const EliteVault: React.FC = () => {
                      <th 
                         key={col.key}
                         onClick={() => handleSort(col.key as SortField)}
-                        className="p-3 text-[10px] font-mono text-gray-500 uppercase tracking-widest cursor-pointer hover:text-white transition-colors select-none"
+                        className="p-3 text-[10px] font-mono text-gray-500 uppercase tracking-widest cursor-pointer hover:text-white transition-colors select-none bg-black"
                      >
                         <div className="flex items-center gap-1">
                            {col.label}
@@ -103,12 +107,28 @@ const EliteVault: React.FC = () => {
                   ))}
                </tr>
             </thead>
-            <tbody className="divide-y divide-void-border font-mono text-xs">
-               {sortedData.map((row) => {
-                 const isAlert = alerts.has(row.asset_id);
+            <tbody className="divide-y divide-void-border font-mono text-xs relative">
+               {/* Loading Overlay */}
+               <AnimatePresence>
+                   {loading && (
+                       <motion.tr
+                           initial={{ opacity: 0 }}
+                           animate={{ opacity: 1 }}
+                           exit={{ opacity: 0 }}
+                           className="absolute inset-0 bg-black/50 z-20 backdrop-blur-[1px] flex items-center justify-center w-full h-full"
+                       >
+                           <td colSpan={7} className="text-center h-full">
+                               <div className="w-full h-[1px] bg-tech-green/50 animate-pulse"></div>
+                           </td>
+                       </motion.tr>
+                   )}
+               </AnimatePresence>
+
+               {data.map((row) => {
+                 const isAlert = alerts.has(row.sku);
                  return (
                     <motion.tr 
-                        key={row.asset_id}
+                        key={row.sku}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className={cn(
@@ -137,7 +157,8 @@ const EliteVault: React.FC = () => {
                           </span>
                        </td>
                        <td className="p-3 text-right pr-8 border-r border-void-border/30">
-                          {row.efficiency_index.toFixed(1)}%
+                          {/* RAW DATA: No toFixed() or calculations. Displaying exactly what DB sends. */}
+                          {row.efficiency_index}%
                        </td>
                        <td className="p-3 text-center">
                           {renderTrend(row.traffic_trend)}

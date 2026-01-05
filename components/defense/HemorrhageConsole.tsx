@@ -12,7 +12,7 @@ import { AlertOctagon, Search, Save, ExternalLink } from 'lucide-react';
 const HemorrhageConsole: React.FC = () => {
   const [items, setItems] = useState<RadarMonetizationReady[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inputs, setInputs] = useState<Record<string, string>>({});
+  const [inputs, setInputs] = useState<Record<string, string>>({}); // Keyed by SKU
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,8 +22,8 @@ const HemorrhageConsole: React.FC = () => {
     });
   }, []);
 
-  const handleInputChange = (id: string, value: string) => {
-    setInputs(prev => ({ ...prev, [id]: value }));
+  const handleInputChange = (sku: string, value: string) => {
+    setInputs(prev => ({ ...prev, [sku]: value }));
   };
 
   const handleHunterSearch = (assetName: string) => {
@@ -33,7 +33,7 @@ const HemorrhageConsole: React.FC = () => {
   };
 
   const handlePatch = async (item: RadarMonetizationReady) => {
-    const link = inputs[item.asset_id];
+    const link = inputs[item.sku];
     if (!link) {
       setError("ENLACE REQUERIDO PARA PROTOCOLO DE PARCHE");
       return;
@@ -41,11 +41,10 @@ const HemorrhageConsole: React.FC = () => {
 
     // Optimistic Update
     const originalItems = [...items];
-    setItems(prev => prev.filter(i => i.asset_id !== item.asset_id));
+    setItems(prev => prev.filter(i => i.sku !== item.sku));
 
     try {
-      await mockService.patchAsset(item.asset_id, 'payhip', link);
-      // Success toast implies silence in this UI philosophy, only errors glitch
+      await mockService.patchAsset(item.sku, 'payhip', link);
     } catch (e) {
       setItems(originalItems);
       setError("FALLO EN INYECCIÓN DE CÓDIGO. REINTENTAR.");
@@ -72,7 +71,7 @@ const HemorrhageConsole: React.FC = () => {
         <AnimatePresence>
           {items.map((item) => (
             <motion.div
-              key={item.asset_id}
+              key={item.sku}
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -94,6 +93,7 @@ const HemorrhageConsole: React.FC = () => {
                   <div className="text-red-400">IMPACTO: {item.potential_revenue_impact}</div>
                   <div className="text-gray-500">SCORE: {item.current_score}</div>
                 </div>
+                 <div className="text-[10px] font-mono text-gray-600">ID: {item.sku}</div>
               </div>
 
               <div className="space-y-3 relative z-10">
@@ -111,8 +111,8 @@ const HemorrhageConsole: React.FC = () => {
                     <div className="flex-1">
                       <TechInput 
                         placeholder="PEGAR PAYHIP LINK..." 
-                        value={inputs[item.asset_id] || ''}
-                        onChange={(e) => handleInputChange(item.asset_id, e.target.value)}
+                        value={inputs[item.sku] || ''}
+                        onChange={(e) => handleInputChange(item.sku, e.target.value)}
                         className="text-xs border-red-900 focus:border-red-500 text-red-100"
                       />
                     </div>

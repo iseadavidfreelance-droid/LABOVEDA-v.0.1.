@@ -15,7 +15,9 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onSelect }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BusinessAsset[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  
+  // Use SKU as key identifier logic internally if needed, 
+  // but we just pass the full object up.
 
   useEffect(() => {
     const search = async () => {
@@ -37,9 +39,8 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onSelect }) => {
   }, [query]);
 
   const handleSelect = (asset: BusinessAsset) => {
-    setSelectedId(asset.id);
     onSelect(asset);
-    setQuery(asset.name); // Set input to name
+    setQuery(asset.sku); // Show SKU in input after selection
     setResults([]); // Close dropdown
   };
 
@@ -51,7 +52,6 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onSelect }) => {
           value={query}
           onChange={(e) => {
              setQuery(e.target.value);
-             setSelectedId(null);
           }}
           className="pl-10 uppercase"
         />
@@ -68,13 +68,13 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onSelect }) => {
           >
             {results.map((asset) => (
               <button
-                key={asset.id}
+                key={asset.sku}
                 onClick={() => handleSelect(asset)}
                 className="w-full text-left p-3 border-b border-void-border/50 hover:bg-void-gray flex items-center justify-between group transition-colors"
               >
                 <div className="flex flex-col">
                   <span className="text-sm font-mono text-white group-hover:text-tech-green transition-colors">{asset.name}</span>
-                  <span className="text-[10px] text-gray-500 tracking-wider">SKU: {asset.sku || 'N/A'}</span>
+                  <span className="text-[10px] text-gray-500 tracking-wider">SKU: {asset.sku}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-[10px] font-mono text-gray-600">{asset.score} PTS</span>
