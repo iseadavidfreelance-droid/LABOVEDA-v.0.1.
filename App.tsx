@@ -7,7 +7,9 @@ import { Play } from 'lucide-react';
 import VoidTerminal from './components/tactical/VoidTerminal';
 import HemorrhageConsole from './components/defense/HemorrhageConsole';
 import InfraConsole from './components/defense/InfraConsole';
+import GhostConsole from './components/defense/GhostConsole';
 import EliteVault from './components/strategy/EliteVault';
+import MatrixManager from './components/tactical/MatrixManager';
 import { MatrixProvider } from './context/MatrixContext';
 import { TacticalProvider } from './context/TacticalContext';
 import { LogProvider } from './context/LogContext';
@@ -35,6 +37,16 @@ const App: React.FC = () => {
             {/* VIEW: DEFENSE / INFRASTRUCTURE */}
             {currentView === 'infrastructure' && (
               <InfraConsole />
+            )}
+
+            {/* VIEW: DEFENSE / GHOSTS */}
+            {currentView === 'ghosts' && (
+              <GhostConsole onNavigate={setCurrentView} />
+            )}
+
+            {/* VIEW: TACTICAL / MATRICES */}
+            {currentView === 'matrices' && (
+              <MatrixManager />
             )}
 
             {/* VIEW: TACTICAL / VOID */}
@@ -112,7 +124,7 @@ const App: React.FC = () => {
             )}
 
             {/* VIEW: PLACEHOLDER FOR OTHERS */}
-            {!['dashboard', 'void', 'hemorragia', 'infrastructure', 'elite'].includes(currentView) && (
+            {!['dashboard', 'void', 'matrices', 'hemorragia', 'infrastructure', 'elite', 'ghosts'].includes(currentView) && (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 font-mono">
                   <p className="text-xl">MÓDULO EN CONSTRUCCIÓN</p>
                   <p className="text-xs mt-2">ACCESO RESTRINGIDO A FASES FUTURAS</p>

@@ -1,199 +1,262 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { PinterestNode, BusinessAsset, RarityTier, RadarMonetizationReady, RadarInfrastructureGap, ViewEliteAnalytics, RadarConversionAlert, AssetStatus, MatrixRegistry } from '../types/database';
+import { PinterestNode, BusinessAsset, RarityTier, RadarMonetizationReady, RadarInfrastructureGap, ViewEliteAnalytics, RadarConversionAlert, AssetStatus, MatrixRegistry, RadarGhostAssets, RadarDustCleaner, RadarTheVoid } from '../types/database';
 
-// NOTA: En un entorno real, estas variables vienen de process.env
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock.supabase.co';
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-key';
+// ENVIRONMENT VARIABLES
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Cliente real (no funcionará sin keys verdaderas en este entorno)
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.warn("SUPABASE CREDENTIALS MISSING. CHECK .ENV FILE.");
+}
+
+// REAL CLIENT
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /**
- * MOCK DATA SERVICE
- * Simula las respuestas de las Vistas SQL definidas en el Manifiesto
- * para permitir la visualización de la UI sin backend conectado.
+ * DATA SERVICE (FORMERLY MOCK SERVICE)
+ * Implementation of strict mapping to Manifesto Views/Tables.
  */
 export const mockService = {
-  // --- FASE 2.0: MATRIX CONTEXT ---
   
+  // --- ONTOLOGY CONTEXT ---
+
   async getMatrices(): Promise<MatrixRegistry[]> {
-    return [
-      { id: 'm1', name: 'CYBER_ARMORY', code: 'ALFA', created_at: '', updated_at: '', total_assets_count: 500, efficiency_score: 92 },
-      { id: 'm2', name: 'NEON_FASHION', code: 'BETA', created_at: '', updated_at: '', total_assets_count: 350, efficiency_score: 85 },
-      { id: 'm3', name: 'DATA_RELICS', code: 'GAMMA', created_at: '', updated_at: '', total_assets_count: 120, efficiency_score: 65 },
-    ];
+    const { data, error } = await supabase
+      .from('matrix_registry')
+      .select('*')
+      .order('code', { ascending: true });
+    
+    if (error) throw error;
+    return data as MatrixRegistry[];
+  },
+
+  async createMatrix(matrix: Partial<MatrixRegistry>): Promise<void> {
+    const { error } = await supabase
+      .from('matrix_registry')
+      .insert(matrix);
+    
+    if (error) throw error;
   },
 
   async getViewCounts() {
-    // Simula: SELECT count(*) FROM [vista]
+    // Parallel count queries for the sidebar badges
+    const [hemorragia, infra, ghosts, void_radar, dust] = await Promise.all([
+      supabase.from('radar_monetization_ready').select('*', { count: 'exact', head: true }),
+      supabase.from('radar_infrastructure_gap').select('*', { count: 'exact', head: true }),
+      supabase.from('radar_ghost_assets').select('*', { count: 'exact', head: true }),
+      supabase.from('radar_the_void').select('*', { count: 'exact', head: true }),
+      supabase.from('radar_dust_cleaner').select('*', { count: 'exact', head: true }),
+    ]);
+
     return {
-      radar_monetization_ready: 12, // Hemorragia
-      radar_infrastructure_gap: 5,  // Infraestructura
-      radar_ghost_assets: 8,        // Fantasmas
-      radar_the_void: 142,          // El Vacío
-      radar_dust_cleaner: 340,      // Incinerador
+      radar_monetization_ready: hemorragia.count || 0,
+      radar_infrastructure_gap: infra.count || 0,
+      radar_ghost_assets: ghosts.count || 0,
+      radar_the_void: void_radar.count || 0,
+      radar_dust_cleaner: dust.count || 0,
     };
   },
 
   async getSystemHeartbeat() {
-    // Simula: SELECT * FROM ingestion_cycles ORDER BY started_at DESC LIMIT 1
+    const { data, error } = await supabase
+      .from('ingestion_cycles')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // Ignore "no rows" error
+       console.error("Heartbeat Error", error);
+       return { status: 'OFFLINE', started_at: new Date().toISOString(), records_processed: 0 };
+    }
+
     return {
-      status: 'RUNNING', // 'RUNNING', 'COMPLETED', 'FAILED'
-      started_at: new Date().toISOString(),
-      records_processed: 1250
+      status: data?.status || 'STANDBY',
+      started_at: data?.started_at,
+      records_processed: data?.records_processed || 0
     };
   },
 
   async getGlobalKPIs() {
-    // Simula agregación de matrix_registry
+    // Assuming simple counts from base tables for now as per manifesto
+    const [assets, nodes] = await Promise.all([
+        supabase.from('business_assets').select('*', { count: 'exact', head: true }),
+        supabase.from('pinterest_nodes').select('*', { count: 'exact', head: true })
+    ]);
+
     return {
-      total_assets: 15420,
-      total_nodes: 45200,
-      efficiency_avg: 87.5
+      total_assets: assets.count || 0,
+      total_nodes: nodes.count || 0,
+      efficiency_avg: 0 // Would require a complex aggregation query or RPC
     };
   },
 
-  // --- FASE 3: TACTICAL / VOID METHODS ---
+  // --- TACTICAL SECTOR (VOID) ---
 
   async getOrphanedNodes(): Promise<PinterestNode[]> {
-    // Generate more mock nodes for the Drag & Drop experience
-    const nodes: PinterestNode[] = [];
-    const tiers = [100, 500, 1200, 40, 20];
-    
-    for(let i=1; i<=12; i++) {
-        nodes.push({
-            id: `node-${i}`,
-            asset_sku: null,
-            pin_id: `pin-${1000+i}`,
-            url: `https://pinterest.com/pin/${i}`,
-            image_url: `https://source.unsplash.com/random/200x300?cyberpunk,tech&sig=${i}`,
-            impressions: tiers[i % 5] * (Math.random() * 10),
-            saves: Math.floor(Math.random() * 50),
-            outbound_clicks: Math.floor(Math.random() * 10),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        });
-    }
-    return nodes;
+    // Nodes without an asset_sku assigned
+    const { data, error } = await supabase
+        .from('pinterest_nodes')
+        .select('*')
+        .is('asset_sku', null)
+        .limit(100); // Safety limit for drag zone
+
+    if (error) throw error;
+    return data as PinterestNode[];
   },
 
-  // NEW: Get Active Assets to act as Silos
   async getTacticalSilos(): Promise<BusinessAsset[]> {
-     return [
-      { sku: 'CKU-2099', matrix_id: 'm1', name: 'Cyber Katana', tier: 'LEGENDARY', score: 1200, status: AssetStatus.ACTIVE, created_at: '', updated_at: '' },
-      { sku: 'NGM-001', matrix_id: 'm2', name: 'Neon Mask', tier: 'RARE', score: 600, status: AssetStatus.ACTIVE, created_at: '', updated_at: '' },
-      { sku: 'TVM-004', matrix_id: 'm1', name: 'Tac Vest', tier: 'COMMON', score: 150, status: AssetStatus.ACTIVE, created_at: '', updated_at: '' },
-      { sku: 'HOLO-X', matrix_id: 'm3', name: 'Holo Proj', tier: 'UNCOMMON', score: 300, status: AssetStatus.ACTIVE, created_at: '', updated_at: '' },
-    ];
+     // Fetch recent active assets to act as drop targets
+     const { data, error } = await supabase
+        .from('business_assets')
+        .select('*')
+        .eq('status', 'ACTIVE')
+        .order('updated_at', { ascending: false })
+        .limit(50);
+    
+     if (error) throw error;
+     return data as BusinessAsset[];
+  },
+
+  async createAsset(asset: BusinessAsset): Promise<void> {
+      const { error } = await supabase
+          .from('business_assets')
+          .insert(asset);
+      if (error) throw error;
   },
 
   async searchAssets(query: string): Promise<BusinessAsset[]> {
     if (!query) return [];
-    const assets: BusinessAsset[] = await this.getTacticalSilos();
-    return assets.filter(a => 
-      a.name.toLowerCase().includes(query.toLowerCase()) || 
-      a.sku.toLowerCase().includes(query.toLowerCase())
-    );
+    
+    const { data, error } = await supabase
+        .from('business_assets')
+        .select('*')
+        .or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
+        .limit(20);
+
+    if (error) throw error;
+    return data as BusinessAsset[];
   },
 
-  // NEW: Get single asset details for Sheet
   async getAssetDetails(sku: string): Promise<BusinessAsset | null> {
-    await new Promise(resolve => setTimeout(resolve, 200)); // Latency
-    const assets = await this.getTacticalSilos();
-    const found = assets.find(a => a.sku === sku);
-    if (found) return found;
+    const { data, error } = await supabase
+        .from('business_assets')
+        .select('*')
+        .eq('sku', sku)
+        .single();
     
-    // Fallback Mock if not in silos
-    return {
-        sku,
-        matrix_id: 'm1',
-        name: 'Unknown Asset Protocol',
-        tier: 'COMMON',
-        score: 0,
-        status: AssetStatus.PENDING,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        description: 'Asset detail retrieved dynamically from deep storage.'
-    };
+    if (error) return null;
+    return data as BusinessAsset;
   },
 
   async linkNodeToAsset(nodeId: string, assetSku: string): Promise<boolean> {
-    return new Promise((resolve) => setTimeout(() => resolve(true), 500));
+    const { error } = await supabase
+        .from('pinterest_nodes')
+        .update({ asset_sku: assetSku })
+        .eq('id', nodeId);
+    
+    if (error) throw error;
+    return true;
   },
 
-  // NEW: Batch Assignment
   async assignNodesToAsset(nodeIds: string[], assetSku: string): Promise<boolean> {
-      console.log(`[DB] Assigning nodes [${nodeIds.join(',')}] to SKU: ${assetSku}`);
-      return new Promise((resolve) => setTimeout(() => resolve(true), 400));
+      const { error } = await supabase
+        .from('pinterest_nodes')
+        .update({ asset_sku: assetSku })
+        .in('id', nodeIds);
+
+      if (error) throw error;
+      return true;
   },
 
-  // NEW: Batch Delete
   async incinerateNodes(nodeIds: string[]): Promise<boolean> {
-      console.log(`[DB] Incinerating nodes [${nodeIds.join(',')}]`);
-      return new Promise((resolve) => setTimeout(() => resolve(true), 400));
+      // In a real scenario, this might set a deleted_at flag or actually delete row
+      const { error } = await supabase
+        .from('pinterest_nodes')
+        .delete()
+        .in('id', nodeIds);
+      
+      if (error) throw error;
+      return true;
   },
 
-  // --- FASE 4: DEFENSE METHODS ---
+  async deleteAsset(sku: string): Promise<void> {
+    const { error } = await supabase
+        .from('business_assets')
+        .delete()
+        .eq('sku', sku);
+    if (error) throw error;
+  },
+
+  // --- DEFENSE SECTOR (RADAR) ---
 
   async getMonetizationGaps(matrixId?: string | null): Promise<RadarMonetizationReady[]> {
-    const data: RadarMonetizationReady[] = [
-      { sku: 'PAS-900', matrix_id: 'm1', asset_name: 'Protocol Alpha Sword', matrix_name: 'CYBER_ARMORY', current_score: 1500, tier: 'LEGENDARY', missing_field: 'LINK', potential_revenue_impact: 'HIGH' },
-      { sku: 'SCV-200', matrix_id: 'm1', asset_name: 'Stealth Camo v2', matrix_name: 'CYBER_ARMORY', current_score: 800, tier: 'RARE', missing_field: 'LINK', potential_revenue_impact: 'HIGH' },
-      { sku: 'NVG-750', matrix_id: 'm2', asset_name: 'Night Vision Goggles', matrix_name: 'NEON_FASHION', current_score: 750, tier: 'RARE', missing_field: 'LINK', potential_revenue_impact: 'MEDIUM' },
-      { sku: 'PLC-920', matrix_id: 'm3', asset_name: 'Plasma Cutter', matrix_name: 'DATA_RELICS', current_score: 920, tier: 'LEGENDARY', missing_field: 'LINK', potential_revenue_impact: 'HIGH' },
-    ];
-    return matrixId ? data.filter(d => d.matrix_id === matrixId) : data;
+    let query = supabase.from('radar_monetization_ready').select('*');
+    if (matrixId) query = query.eq('matrix_id', matrixId);
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as RadarMonetizationReady[];
   },
 
   async getInfrastructureGaps(matrixId?: string | null): Promise<RadarInfrastructureGap[]> {
-    const data: RadarInfrastructureGap[] = [
-      { sku: 'UA-001-MISSING', matrix_id: 'm1', asset_name: 'Unnamed Asset 001', issue_type: 'MISSING_SKU', detected_at: new Date().toISOString(), days_open: 12 },
-      { sku: 'CF-CORRUPT', matrix_id: 'm2', asset_name: 'Corrupted File', issue_type: 'BROKEN_IMAGE', detected_at: new Date().toISOString(), days_open: 5 },
-      { sku: 'RMB-4545', matrix_id: 'm3', asset_name: 'Raw Material Bundle', issue_type: 'NO_DESCRIPTION', detected_at: new Date().toISOString(), days_open: 45 },
-    ];
-    return matrixId ? data.filter(d => d.matrix_id === matrixId) : data;
+    let query = supabase.from('radar_infrastructure_gap').select('*');
+    if (matrixId) query = query.eq('matrix_id', matrixId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as RadarInfrastructureGap[];
+  },
+
+  async getGhostAssets(matrixId?: string | null): Promise<RadarGhostAssets[]> {
+    let query = supabase.from('radar_ghost_assets').select('*');
+    if (matrixId) query = query.eq('matrix_id', matrixId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as RadarGhostAssets[];
   },
 
   async patchAsset(sku: string, field: 'payhip' | 'drive', value: string): Promise<boolean> {
-    console.log(`Patching SKU ${sku} on field ${field} with value ${value}`);
-    return new Promise((resolve) => setTimeout(() => resolve(true), 600));
+    const updatePayload: any = {};
+    if (field === 'payhip') updatePayload.monetization_link = value;
+    // Assuming 'drive' maps to description or a specific column not defined in interface, 
+    // sticking to description for now based on context, or just logging it if schema doesn't support yet.
+    if (field === 'drive') updatePayload.description = value; 
+
+    const { error } = await supabase
+        .from('business_assets')
+        .update(updatePayload)
+        .eq('sku', sku);
+
+    if (error) throw error;
+    return true;
   },
 
-  // --- FASE 5: STRATEGY METHODS ---
+  // --- STRATEGY SECTOR ---
 
   async getEliteAnalytics(orderBy: string = 'efficiency_index', ascending: boolean = false, matrixId?: string | null): Promise<ViewEliteAnalytics[]> {
-    let rawData: ViewEliteAnalytics[] = [
-        { sku: 'QCP-9000', matrix_id: 'm1', asset_name: 'Quantum Core Processor', tier: 'LEGENDARY', traffic_score: 98, revenue_score: 95, efficiency_index: 99.5, traffic_trend: 'UP' },
-        { sku: 'VRS-2025', matrix_id: 'm2', asset_name: 'Void Runner Sneakers', tier: 'LEGENDARY', traffic_score: 92, revenue_score: 88, efficiency_index: 94.2, traffic_trend: 'STABLE' },
-        { sku: 'NGM-003', matrix_id: 'm2', asset_name: 'Neon Gas Mask v3', tier: 'RARE', traffic_score: 85, revenue_score: 70, efficiency_index: 82.1, traffic_trend: 'UP' },
-        { sku: 'NIC-101', matrix_id: 'm1', asset_name: 'Neural Interface Cable', tier: 'RARE', traffic_score: 78, revenue_score: 65, efficiency_index: 76.5, traffic_trend: 'DOWN' },
-        { sku: 'CDB-000', matrix_id: 'm3', asset_name: 'Corrupted Databank', tier: 'LEGENDARY', traffic_score: 99, revenue_score: 0, efficiency_index: 12.0, traffic_trend: 'UP' },
-    ];
+    let query = supabase
+        .from('view_elite_analytics')
+        .select('*')
+        .order(orderBy, { ascending });
+    
+    if (matrixId) query = query.eq('matrix_id', matrixId);
 
-    if (matrixId) {
-        rawData = rawData.filter(d => d.matrix_id === matrixId);
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    return rawData.sort((a, b) => {
-      const valA = a[orderBy as keyof ViewEliteAnalytics];
-      const valB = b[orderBy as keyof ViewEliteAnalytics];
-      
-      if (valA === valB) return 0;
-      if (valA === undefined || valA === null) return 1;
-      if (valB === undefined || valB === null) return -1;
-      
-      let comparison = 0;
-      if (valA > valB) comparison = 1;
-      else if (valA < valB) comparison = -1;
-
-      return ascending ? comparison : comparison * -1;
-    });
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as ViewEliteAnalytics[];
   },
 
   async getConversionAlerts(): Promise<RadarConversionAlert[]> {
-      return [{ sku: 'CDB-000' }];
+      // This might be a separate view or a filtered query on Elite Analytics
+      // For now, assuming specific view
+      const { data, error } = await supabase.from('radar_conversion_alert').select('*'); 
+      if (error) {
+          // Fallback if view doesn't exist yet
+          return [];
+      }
+      return data as RadarConversionAlert[];
   }
 };

@@ -29,6 +29,7 @@ export interface MatrixRegistry {
   id: string; // UUID (Matrix still uses UUID or Code)
   name: string;
   code: string; // Internal reference code
+  type: 'PRIMARY' | 'SECONDARY'; // Added per v2.1 Requirement
   description?: string;
   logo_url?: string;
   created_at: string;

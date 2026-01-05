@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { ShieldAlert, Radar, Zap, Layers, Skull, Trash2, LayoutDashboard, Database, Activity } from "lucide-react";
+import { ShieldAlert, Radar, Zap, Layers, Skull, Trash2, LayoutDashboard, Database, Activity, Hexagon } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { mockService } from "../../lib/supabase";
 
@@ -120,6 +120,12 @@ const SideNav: React.FC<SideNavProps> = ({ currentView, onNavigate }) => {
 
         {/* SECTOR TÁCTICO (ALT+2) */}
         <SectionTitle>02 // Táctico (Ops)</SectionTitle>
+        <NavItem 
+          label="Matrices" 
+          icon={Hexagon} 
+          active={currentView === 'matrices'}
+          onClick={() => onNavigate('matrices')}
+        />
         <NavItem 
           label="El Vacío" 
           icon={Radar} 
